@@ -3,6 +3,9 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/core/core.hpp"
 #include "opencv2/nonfree/features2d.hpp"
+
+#include <iostream>
+#include <fstream>
 //#include "opencv/cxcore.h"
 
 using namespace std;
@@ -23,16 +26,28 @@ typedef struct extendedDMatch{
 } eDMatch;
 */
 
+/*	function prototypes	*/
+bool is_white(cv::Vec3b);
+void imshow_seq(vector<cv::Mat>);
+vector<cv::Mat> load_mask(void);
+vector<cv::Vec3b> get_values_from_map(Mat image, vector<cv::Mat> mask_set, bool print);
+
+
 void main(){
 	int index = 0;
 START:
 	std::string str1, str2;
-	str1 = "c:/cvimagetest/white_img_org.png";
+	str1 = "c:/cvimagetest/template.png";
 	index += 1;
-	str2 = "c:/cvimagetest/";
+	str2 = "c:/cvimagetest/new_chart/";
 	str2 += to_string(index);
 	str2 += ".png";
-	cout << "processing " << str2 << "..." << endl;
+	
+	ofstream output("c:/cvimagetest/output.txt", ios::app);
+	output << to_string(index) << ".png" << endl;
+	
+
+	cout << to_string(index) << ".png" << endl;
 	//load image
 	Mat image_template;
 	Mat image1, image2;
@@ -97,12 +112,11 @@ START:
 			//float dx = (image1.cols - siftkeypoints1.at(cur.queryIdx).pt.x + siftkeypoints2.at(cur.trainIdx).pt.x);
 			//float dy = (image1.rows - siftkeypoints1.at(cur.queryIdx).pt.y + siftkeypoints2.at(cur.trainIdx).pt.y);
 			int dy = ( (-siftkeypoints1.at(cur.queryIdx).pt.y) + siftkeypoints2.at(cur.trainIdx).pt.y);
-			//printf("%f \n", (dx / dy));
 			if (!(dy < 5 && dy > -5)) slope_matches.pop_back();
 		}
 	}
 	//cout << slope_matches.size() << endl;
-
+	
 	
 	std::vector<DMatch> good_matches(slope_matches);
 	/*
@@ -158,7 +172,8 @@ START:
 	cout << scene_corners[2] << endl;
 	cout << scene_corners[3] << endl;
 	*/
-	//Draw lines between the corners (the mapped object in the scene - image_2 )
+
+	//Draw lines between corners
 	line(view, scene_corners[0] + Point2f(image1.cols, 0), scene_corners[1] + Point2f(image1.cols, 0), Scalar(0, 255, 0), 4);
 	line(view, scene_corners[1] + Point2f(image1.cols, 0), scene_corners[2] + Point2f(image1.cols, 0), Scalar(0, 255, 0), 4);
 	line(view, scene_corners[2] + Point2f(image1.cols, 0), scene_corners[3] + Point2f(image1.cols, 0), Scalar(0, 255, 0), 4);
@@ -167,7 +182,12 @@ START:
 	Mat W = getPerspectiveTransform(obj_corners, scene_corners);
 	Mat warped_image;
 	warpPerspective(image2, warped_image, W.inv(), Size(image1.cols, image1.rows));
+	
+	//imshow("view", view);
+	//imshow("canny1", canny1);
+	//imshow("canny2", canny2);
 
+	/*
 	Vec3b seoul = warped_image.at<Vec3b>(Point(215, 160));
 	Vec3b gyeonggi = warped_image.at<Vec3b>(Point(230, 190));
 	Vec3b incheon = warped_image.at<Vec3b>(Point(170, 140));
@@ -230,7 +250,234 @@ START:
 	imshow("warped", warped_image);
 	imshow("view", view);
 	cv::waitKey(0);
+	*/
+	
+	/*			지역코드		*/
+	/*	서울 : 0	충북 : 10	*/
+	/*	경기 : 1	충남 : 11	*/
+	/*	인천 : 2	전북 : 12	*/
+	/*	대전 : 3	전남 : 13	*/
+	/*	세종 : 4	경북 : 14	*/
+	/*	대구 : 5	경남 : 15	*/
+	/*	울산 : 6	제주 : 16	*/
+	/*	부산 : 7	---------	*/
+	/*	광주 : 8	---------	*/
+	/*	강원 : 9	---------	*/
+
+	imshow("result", warped_image);
+
+	vector<Mat> mask_set = load_mask();
+
+	//cout << "result of original image" << endl;
+	//get_values_from_map(image2, mask_set, true);
+	get_values_from_map(warped_image, mask_set, true);
+	
+	cout << endl;
+	
+	output << endl;
+	output.close();
+	
+	waitKey(0);
 	goto START;
 
 }
 
+
+bool is_white(cv::Vec3b pixel){
+	if (pixel[0] == 255){
+		if (pixel[1] == 255){
+			if (pixel[2] == 255){
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+void imshow_seq(vector<cv::Mat> image_set){
+	for (int i = 0; i < image_set.size(); i++){
+		imshow("mask", image_set.at(i));
+		waitKey(0);
+	}
+}
+
+vector<cv::Mat> load_mask(void){
+
+	vector<cv::Mat> mask_set;
+	mask_set.clear();
+
+	std::string mask_names[17] = { "mask_su", "mask_gg", "mask_ic", "mask_dj", 
+		"mask_sj", "mask_dg", "mask_us", "mask_bs", "mask_gj", "mask_gw", 
+		"mask_cb", "mask_cn", "mask_jb", "mask_jn", "mask_gb", "mask_gn", 
+		"mask_jj" };
+
+	/*			지역코드		*/
+	/*	서울 : 0	충북 : 10	*/
+	/*	경기 : 1	충남 : 11	*/
+	/*	인천 : 2	전북 : 12	*/
+	/*	대전 : 3	전남 : 13	*/
+	/*	세종 : 4	경북 : 14	*/
+	/*	대구 : 5	경남 : 15	*/
+	/*	울산 : 6	제주 : 16	*/
+	/*	부산 : 7	---------	*/
+	/*	광주 : 8	---------	*/
+	/*	강원 : 9	---------	*/	
+	cv::Mat mask;
+	for (int i = 0; i < 17; i++){
+		std::string path = "c:/cvimagetest/mask/";
+		path += mask_names[i];
+		path += ".png";
+		mask = cv::imread(path, CV_LOAD_IMAGE_COLOR);
+		if (mask.empty()){
+			cout << "Failed to read mask file : " << path << endl;
+			exit(-1);
+		}
+
+		mask_set.push_back(mask);
+	}
+
+	return mask_set;
+}
+
+vector<cv::Vec3b> get_values_from_map(Mat image, vector<cv::Mat> mask_set, bool print){
+	vector<cv::Vec3b> result;
+	result.clear();
+	
+	//
+	vector<int> pixels_dominant;
+	pixels_dominant.clear();
+	//
+	/*
+	vector<int> mask_ground_vec;
+	mask_ground_vec.clear();
+	*/
+
+
+	/*			지역코드		*/
+	/*	서울 : 0	충북 : 10	*/
+	/*	경기 : 1	충남 : 11	*/
+	/*	인천 : 2	전북 : 12	*/
+	/*	대전 : 3	전남 : 13	*/
+	/*	세종 : 4	경북 : 14	*/
+	/*	대구 : 5	경남 : 15	*/
+	/*	울산 : 6	제주 : 16	*/
+	/*	부산 : 7	---------	*/
+	/*	광주 : 8	---------	*/
+	/*	강원 : 9	---------	*/
+	for (int i = 0; i < mask_set.size(); i++){
+		cv::Mat mask_cur = mask_set[i];
+		vector<cv::Vec3b> colors;
+		vector<int> counts;
+		colors.clear();
+		counts.clear();
+	
+		//int mask_ground_counter = 0;
+
+		for (int m = 0; m < mask_cur.cols; m++){
+			for (int n = 0; n < mask_cur.rows; n++){
+				Vec3b color_cur = Vec3b(mask_cur.at<Vec3b>(m, n)); // mask color at (m,n) (black or white)
+
+				if ( is_white(color_cur) ){
+					//mask_ground_counter += 1;
+					if (colors.size() == 0){
+						colors.push_back(Vec3b(image.at<Vec3b>(m, n)));
+						counts.push_back(0);
+					}
+					else{
+						for (int k = 0; k < colors.size(); k++){
+							if (colors[k] == Vec3b(image.at<Vec3b>(m, n))){
+								counts[k] += 1;
+								break;
+							}else{
+								if (k == colors.size() - 1){
+									colors.push_back(Vec3b(image.at<Vec3b>(m, n)));
+									counts.push_back(0);
+								}
+							}
+						}
+					}
+				}
+				
+			}
+
+		}
+
+		if (colors.size() != counts.size()) {
+			cout << "may be error!" << endl;
+			exit(-1);
+		}
+		
+		Vec3b dominant_color;
+		int dominant_index = 0;
+		for (int p = 0; p < counts.size(); p++){
+			
+			if (counts[p] > counts[dominant_index]){
+				dominant_index = p;
+			}
+			
+		}
+		dominant_color = colors[dominant_index];
+
+		result.push_back(dominant_color);
+		//
+		pixels_dominant.push_back(counts[dominant_index]);
+
+
+		//mask_ground_vec.push_back(mask_ground_counter);
+	}
+
+	/*
+	for (int i = 0; i < mask_ground_vec.size(); i++){
+		cout << mask_ground_vec[i] << endl;
+	}
+	*/
+
+	int mask_ground[17] = {325, 6305, 478, 300, 248, 491, 616, 362, 277, 10631, 4509, 5023, 4868, 6797, 11913, 6281, 1132};
+	if (print){
+		cout << "지역명\t" << "grayscale\t" << "[B,G,R]\t" << "valid_pixels\t" << "error(%)\t" << endl;
+		cout << "서울\t" << ((result[0][0] + result[0][1] + result[0][2]) / 3) << "\t" << result[0] << "\t" << pixels_dominant[0] << "\t" <<(((float)(mask_ground[0] - pixels_dominant[0]))/(float)mask_ground[0]) * 100 << "%" << endl;
+		cout << "경기\t" << ((result[1][0] + result[1][1] + result[1][2]) / 3) << "\t" << result[1] << "\t" << pixels_dominant[1] << "\t" << (((float)(mask_ground[1] - pixels_dominant[1])) / (float)mask_ground[1]) * 100 << "%" << endl;
+		cout << "인천\t" << ((result[2][0] + result[2][1] + result[2][2]) / 3) << "\t" << result[2] << "\t" << pixels_dominant[2] << "\t" << (((float)(mask_ground[2] - pixels_dominant[2])) / (float)mask_ground[2]) * 100 << "%" << endl;
+		cout << "대전\t" << ((result[3][0] + result[3][1] + result[3][2]) / 3) << "\t" << result[3] << "\t" << pixels_dominant[3] << "\t" << (((float)(mask_ground[3] - pixels_dominant[3])) / (float)mask_ground[3]) * 100 << "%" << endl;
+		cout << "세종\t" << ((result[4][0] + result[4][1] + result[4][2]) / 3) << "\t" << result[4] << "\t" << pixels_dominant[4] << "\t" << (((float)(mask_ground[4] - pixels_dominant[4])) / (float)mask_ground[4]) * 100 << "%" << endl;
+		cout << "대구\t" << ((result[5][0] + result[5][1] + result[5][2]) / 3) << "\t" << result[5] << "\t" << pixels_dominant[5] << "\t" << (((float)(mask_ground[5] - pixels_dominant[5])) / (float)mask_ground[5]) * 100 << "%" << endl;
+		cout << "울산\t" << ((result[6][0] + result[6][1] + result[6][2]) / 3) << "\t" << result[6] << "\t" << pixels_dominant[6] << "\t" << (((float)(mask_ground[6] - pixels_dominant[6])) / (float)mask_ground[6]) * 100 << "%" << endl;
+		cout << "부산\t" << ((result[7][0] + result[7][1] + result[7][2]) / 3) << "\t" << result[7] << "\t" << pixels_dominant[7] << "\t" << (((float)(mask_ground[7] - pixels_dominant[7])) / (float)mask_ground[7]) * 100 << "%" << endl;
+		cout << "광주\t" << ((result[8][0] + result[8][1] + result[8][2]) / 3) << "\t" << result[8] << "\t" << pixels_dominant[8] << "\t" << (((float)(mask_ground[8] - pixels_dominant[8])) / (float)mask_ground[8]) * 100 << "%" << endl;
+
+		cout << "강원\t" << ((result[9][0] + result[9][1] + result[9][2]) / 3) << "\t" << result[9] << "\t" << pixels_dominant[9] << "\t" << (((float)(mask_ground[9] - pixels_dominant[9])) / (float)mask_ground[9]) * 100 << "%" << endl;
+		cout << "충북\t" << ((result[10][0] + result[10][1] + result[10][2]) / 3) << "\t" << result[10] << "\t" << pixels_dominant[10] << "\t" << (((float)(mask_ground[10] - pixels_dominant[10])) / (float)mask_ground[10]) * 100 << "%" << endl;
+		cout << "충남\t" << ((result[11][0] + result[11][1] + result[11][2]) / 3) << "\t" << result[11] << "\t" << pixels_dominant[11] << "\t" << (((float)(mask_ground[11] - pixels_dominant[11])) / (float)mask_ground[11]) * 100 << "%" << endl;
+		cout << "전북\t" << ((result[12][0] + result[12][1] + result[12][2]) / 3) << "\t" << result[12] << "\t" << pixels_dominant[12] << "\t" << (((float)(mask_ground[12] - pixels_dominant[12])) / (float)mask_ground[12]) * 100 << "%" << endl;
+		cout << "전남\t" << ((result[13][0] + result[13][1] + result[13][2]) / 3) << "\t" << result[13] << "\t" << pixels_dominant[13] << "\t" << (((float)(mask_ground[13] - pixels_dominant[13])) / (float)mask_ground[13]) * 100 << "%" << endl;
+		cout << "경북\t" << ((result[14][0] + result[14][1] + result[14][2]) / 3) << "\t" << result[14] << "\t" << pixels_dominant[14] << "\t" << (((float)(mask_ground[14] - pixels_dominant[14])) / (float)mask_ground[14]) * 100 << "%" << endl;
+		cout << "경남\t" << ((result[15][0] + result[15][1] + result[15][2]) / 3) << "\t" << result[15] << "\t" << pixels_dominant[15] << "\t" << (((float)(mask_ground[15] - pixels_dominant[15])) / (float)mask_ground[15]) * 100 << "%" << endl;
+		cout << "제주\t" << ((result[16][0] + result[16][1] + result[16][2]) / 3) << "\t" << result[16] << "\t" << pixels_dominant[16] << "\t" << (((float)(mask_ground[16] - pixels_dominant[16])) / (float)mask_ground[16]) * 100 << "%" << endl;
+	}
+
+	
+	ofstream output("c:/cvimagetest/output.txt", ios::app);
+	output << "서울\t" << ((result[0][0] + result[0][1] + result[0][2]) / 3) << "\t" << result[0] << "\t" << pixels_dominant[0] << "\t" << (((float)(mask_ground[0] - pixels_dominant[0])) / (float)mask_ground[0]) * 100 << "" << endl;
+	output << "경기\t" << ((result[1][0] + result[1][1] + result[1][2]) / 3) << "\t" << result[1] << "\t" << pixels_dominant[1] << "\t" << (((float)(mask_ground[1] - pixels_dominant[1])) / (float)mask_ground[1]) * 100 << "" << endl;
+	output << "인천\t" << ((result[2][0] + result[2][1] + result[2][2]) / 3) << "\t" << result[2] << "\t" << pixels_dominant[2] << "\t" << (((float)(mask_ground[2] - pixels_dominant[2])) / (float)mask_ground[2]) * 100 << "" << endl;
+	output << "대전\t" << ((result[3][0] + result[3][1] + result[3][2]) / 3) << "\t" << result[3] << "\t" << pixels_dominant[3] << "\t" << (((float)(mask_ground[3] - pixels_dominant[3])) / (float)mask_ground[3]) * 100 << "" << endl;
+	output << "세종\t" << ((result[4][0] + result[4][1] + result[4][2]) / 3) << "\t" << result[4] << "\t" << pixels_dominant[4] << "\t" << (((float)(mask_ground[4] - pixels_dominant[4])) / (float)mask_ground[4]) * 100 << "" << endl;
+	output << "대구\t" << ((result[5][0] + result[5][1] + result[5][2]) / 3) << "\t" << result[5] << "\t" << pixels_dominant[5] << "\t" << (((float)(mask_ground[5] - pixels_dominant[5])) / (float)mask_ground[5]) * 100 << "" << endl;
+	output << "울산\t" << ((result[6][0] + result[6][1] + result[6][2]) / 3) << "\t" << result[6] << "\t" << pixels_dominant[6] << "\t" << (((float)(mask_ground[6] - pixels_dominant[6])) / (float)mask_ground[6]) * 100 << "" << endl;
+	output << "부산\t" << ((result[7][0] + result[7][1] + result[7][2]) / 3) << "\t" << result[7] << "\t" << pixels_dominant[7] << "\t" << (((float)(mask_ground[7] - pixels_dominant[7])) / (float)mask_ground[7]) * 100 << "" << endl;
+	output << "광주\t" << ((result[8][0] + result[8][1] + result[8][2]) / 3) << "\t" << result[8] << "\t" << pixels_dominant[8] << "\t" << (((float)(mask_ground[8] - pixels_dominant[8])) / (float)mask_ground[8]) * 100 << "" << endl;
+
+	output << "강원\t" << ((result[9][0] + result[9][1] + result[9][2]) / 3) << "\t" << result[9] << "\t" << pixels_dominant[9] << "\t" << (((float)(mask_ground[9] - pixels_dominant[9])) / (float)mask_ground[9]) * 100 << "" << endl;
+	output << "충북\t" << ((result[10][0] + result[10][1] + result[10][2]) / 3) << "\t" << result[10] << "\t" << pixels_dominant[10] << "\t" << (((float)(mask_ground[10] - pixels_dominant[10])) / (float)mask_ground[10]) * 100 << "" << endl;
+	output << "충남\t" << ((result[11][0] + result[11][1] + result[11][2]) / 3) << "\t" << result[11] << "\t" << pixels_dominant[11] << "\t" << (((float)(mask_ground[11] - pixels_dominant[11])) / (float)mask_ground[11]) * 100 << "" << endl;
+	output << "전북\t" << ((result[12][0] + result[12][1] + result[12][2]) / 3) << "\t" << result[12] << "\t" << pixels_dominant[12] << "\t" << (((float)(mask_ground[12] - pixels_dominant[12])) / (float)mask_ground[12]) * 100 << "" << endl;
+	output << "전남\t" << ((result[13][0] + result[13][1] + result[13][2]) / 3) << "\t" << result[13] << "\t" << pixels_dominant[13] << "\t" << (((float)(mask_ground[13] - pixels_dominant[13])) / (float)mask_ground[13]) * 100 << "" << endl;
+	output << "경북\t" << ((result[14][0] + result[14][1] + result[14][2]) / 3) << "\t" << result[14] << "\t" << pixels_dominant[14] << "\t" << (((float)(mask_ground[14] - pixels_dominant[14])) / (float)mask_ground[14]) * 100 << "" << endl;
+	output << "경남\t" << ((result[15][0] + result[15][1] + result[15][2]) / 3) << "\t" << result[15] << "\t" << pixels_dominant[15] << "\t" << (((float)(mask_ground[15] - pixels_dominant[15])) / (float)mask_ground[15]) * 100 << "" << endl;
+	output << "제주\t" << ((result[16][0] + result[16][1] + result[16][2]) / 3) << "\t" << result[16] << "\t" << pixels_dominant[16] << "\t" << (((float)(mask_ground[16] - pixels_dominant[16])) / (float)mask_ground[16]) * 100 << "" << endl;
+	output.close();
+	
+
+
+	return result;
+}
