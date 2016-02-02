@@ -11,29 +11,19 @@
 using namespace std;
 using namespace cv;
 
-/*
-struct extendedDMatch{
-	DMatch match;
-	Point2i queryAddr;
-	Point2i trainAddr;
-
-};
-
-typedef struct extendedDMatch{
-	DMatch match;
-	Point2i queryAddr;
-	Point2i trainAddr;
-} eDMatch;
-*/
 
 /*	function prototypes	*/
 bool is_white(cv::Vec3b);
 void imshow_seq(vector<cv::Mat>);
 vector<cv::Mat> load_mask(void);
 vector<cv::Vec3b> get_values_from_map(Mat image, vector<cv::Mat> mask_set, bool print);
+vector<int> make_grayscale_value(vector<cv::Vec3b> input);
+void print_same_region(vector<int> input, int index);
 
 
+/*	Main function	*/
 void main(){
+	
 	int index = 0;
 START:
 	std::string str1, str2;
@@ -270,15 +260,19 @@ START:
 
 	//cout << "result of original image" << endl;
 	//get_values_from_map(image2, mask_set, true);
-	get_values_from_map(warped_image, mask_set, true);
+	vector<Vec3b> regional_result = get_values_from_map(warped_image, mask_set, true);
 	
-	cout << endl;
-	
+	cout << endl;	
 	output << endl;
 	output.close();
 	
+	vector<int> grayscale_result = make_grayscale_value(regional_result);
+
+	//cout << grayscale_result.size() << endl;
+
+	print_same_region(grayscale_result, 10);
 	waitKey(0);
-	goto START;
+goto START;
 
 }
 
@@ -342,7 +336,6 @@ vector<cv::Mat> load_mask(void){
 vector<cv::Vec3b> get_values_from_map(Mat image, vector<cv::Mat> mask_set, bool print){
 	vector<cv::Vec3b> result;
 	result.clear();
-	
 	//
 	vector<int> pixels_dominant;
 	pixels_dominant.clear();
@@ -431,9 +424,10 @@ vector<cv::Vec3b> get_values_from_map(Mat image, vector<cv::Mat> mask_set, bool 
 		cout << mask_ground_vec[i] << endl;
 	}
 	*/
-
+	
 	int mask_ground[17] = {325, 6305, 478, 300, 248, 491, 616, 362, 277, 10631, 4509, 5023, 4868, 6797, 11913, 6281, 1132};
 	if (print){
+		/*
 		cout << "지역명\t" << "grayscale\t" << "[B,G,R]\t" << "valid_pixels\t" << "error(%)\t" << endl;
 		cout << "서울\t" << ((result[0][0] + result[0][1] + result[0][2]) / 3) << "\t" << result[0] << "\t" << pixels_dominant[0] << "\t" <<(((float)(mask_ground[0] - pixels_dominant[0]))/(float)mask_ground[0]) * 100 << "%" << endl;
 		cout << "경기\t" << ((result[1][0] + result[1][1] + result[1][2]) / 3) << "\t" << result[1] << "\t" << pixels_dominant[1] << "\t" << (((float)(mask_ground[1] - pixels_dominant[1])) / (float)mask_ground[1]) * 100 << "%" << endl;
@@ -453,6 +447,28 @@ vector<cv::Vec3b> get_values_from_map(Mat image, vector<cv::Mat> mask_set, bool 
 		cout << "경북\t" << ((result[14][0] + result[14][1] + result[14][2]) / 3) << "\t" << result[14] << "\t" << pixels_dominant[14] << "\t" << (((float)(mask_ground[14] - pixels_dominant[14])) / (float)mask_ground[14]) * 100 << "%" << endl;
 		cout << "경남\t" << ((result[15][0] + result[15][1] + result[15][2]) / 3) << "\t" << result[15] << "\t" << pixels_dominant[15] << "\t" << (((float)(mask_ground[15] - pixels_dominant[15])) / (float)mask_ground[15]) * 100 << "%" << endl;
 		cout << "제주\t" << ((result[16][0] + result[16][1] + result[16][2]) / 3) << "\t" << result[16] << "\t" << pixels_dominant[16] << "\t" << (((float)(mask_ground[16] - pixels_dominant[16])) / (float)mask_ground[16]) * 100 << "%" << endl;
+		*/
+
+
+		cout << "지역명\t" << "grayscale\t" << "[B,G,R]\t" << endl;
+		cout << "서울\t" << ((result[0][0] + result[0][1] + result[0][2]) / 3) << "\t\t" << result[0] << "\t" << endl;
+		cout << "경기\t" << ((result[1][0] + result[1][1] + result[1][2]) / 3) << "\t\t" << result[1] << "\t" << endl;
+		cout << "인천\t" << ((result[2][0] + result[2][1] + result[2][2]) / 3) << "\t\t" << result[2] << "\t" << endl;
+		cout << "대전\t" << ((result[3][0] + result[3][1] + result[3][2]) / 3) << "\t\t" << result[3] << "\t" << endl;
+		cout << "세종\t" << ((result[4][0] + result[4][1] + result[4][2]) / 3) << "\t\t" << result[4] << "\t" << endl;
+		cout << "대구\t" << ((result[5][0] + result[5][1] + result[5][2]) / 3) << "\t\t" << result[5] << "\t" << endl;
+		cout << "울산\t" << ((result[6][0] + result[6][1] + result[6][2]) / 3) << "\t\t" << result[6] << "\t" << endl;
+		cout << "부산\t" << ((result[7][0] + result[7][1] + result[7][2]) / 3) << "\t\t" << result[7] << "\t" << endl;
+		cout << "광주\t" << ((result[8][0] + result[8][1] + result[8][2]) / 3) << "\t\t" << result[8] << "\t" << endl;
+
+		cout << "강원\t" << ((result[9][0] + result[9][1] + result[9][2]) / 3) << "\t\t" << result[9] << "\t" << endl;
+		cout << "충북\t" << ((result[10][0] + result[10][1] + result[10][2]) / 3) << "\t\t" << result[10] << "\t" << endl;
+		cout << "충남\t" << ((result[11][0] + result[11][1] + result[11][2]) / 3) << "\t\t" << result[11] << "\t" << endl;
+		cout << "전북\t" << ((result[12][0] + result[12][1] + result[12][2]) / 3) << "\t\t" << result[12] << "\t" << endl;
+		cout << "전남\t" << ((result[13][0] + result[13][1] + result[13][2]) / 3) << "\t\t" << result[13] << "\t" << endl;
+		cout << "경북\t" << ((result[14][0] + result[14][1] + result[14][2]) / 3) << "\t\t" << result[14] << "\t" << endl;
+		cout << "경남\t" << ((result[15][0] + result[15][1] + result[15][2]) / 3) << "\t\t" << result[15] << "\t" << endl;
+		cout << "제주\t" << ((result[16][0] + result[16][1] + result[16][2]) / 3) << "\t\t" << result[16] << "\t" << endl;
 	}
 
 	
@@ -480,4 +496,62 @@ vector<cv::Vec3b> get_values_from_map(Mat image, vector<cv::Mat> mask_set, bool 
 
 
 	return result;
+}
+
+vector<int> make_grayscale_value(vector<cv::Vec3b> input){
+	/*			지역코드		*/
+	/*	서울 : 0	충북 : 10	*/
+	/*	경기 : 1	충남 : 11	*/
+	/*	인천 : 2	전북 : 12	*/
+	/*	대전 : 3	전남 : 13	*/
+	/*	세종 : 4	경북 : 14	*/
+	/*	대구 : 5	경남 : 15	*/
+	/*	울산 : 6	제주 : 16	*/
+	/*	부산 : 7	---------	*/
+	/*	광주 : 8	---------	*/
+	/*	강원 : 9	---------	*/
+	vector<int> result;
+	result.clear();
+
+	for (int i = 0; i < input.size(); i++){
+		result.push_back(((input[i][0] + input[i][1] + input[i][2]) / 3));
+	}
+
+	return result;
+}
+
+void print_same_region(vector<int> input, int index){
+	/*			지역코드		*/
+	/*	서울 : 0	충북 : 10	*/
+	/*	경기 : 1	충남 : 11	*/
+	/*	인천 : 2	전북 : 12	*/
+	/*	대전 : 3	전남 : 13	*/
+	/*	세종 : 4	경북 : 14	*/
+	/*	대구 : 5	경남 : 15	*/
+	/*	울산 : 6	제주 : 16	*/
+	/*	부산 : 7	---------	*/
+	/*	광주 : 8	---------	*/
+	/*	강원 : 9	---------	*/
+	String region_name[17] = { "서울", "경기", "인천", "대전", "세종", "대구", "울산", "부산", "광주", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주" };
+
+	if (index >= 17){
+		cout << "Index value must smaller than 17!" << endl;
+		return;
+	}
+
+	cout << "선택된 지역 : " << region_name[index] << endl;
+	cout << "선택된 지역과 같은 값을 가지는 지역들 : ";
+	
+	int selected_value = input[index];
+
+	for (int i = 0; i < input.size(); i++){	
+		if (input[i] == selected_value){
+			if (i == index) continue;
+
+			cout << region_name[i] << " ";
+		}
+	}
+	cout << endl;
+
+	return;
 }
